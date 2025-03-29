@@ -8,7 +8,6 @@ class GameBoard {
   }
 
   showGameStatus(gameWin) {
-    // Create and show game win or game over
     const div = document.createElement('div');
     div.classList.add('game-status');
     div.innerHTML = `${gameWin ? 'WIN!' : 'GAME OVER!'}`;
@@ -19,7 +18,6 @@ class GameBoard {
     this.dotCount = 0;
     this.grid = [];
     this.DOMGrid.innerHTML = '';
-    // First set correct amount of columns based on Grid Size and Cell Size
     this.DOMGrid.style.cssText = `grid-template-columns: repeat(${GRID_SIZE}, ${CELL_SIZE}px);`;
 
     level.forEach((square) => {
@@ -29,9 +27,52 @@ class GameBoard {
       this.DOMGrid.appendChild(div);
       this.grid.push(div);
 
-      // Add dots
       if (CLASS_LIST[square] === OBJECT_TYPE.DOT) this.dotCount++;
     });
+  }
+
+  // Dynamically add a new row to the bottom.
+  appendRow() {
+    for (let i = 0; i < GRID_SIZE; i++) {
+      const div = document.createElement('div');
+      let cellType;
+      
+      // Ensure the left and right edges are always walls.
+      if (i === 0 || i === GRID_SIZE - 1) {
+        cellType = OBJECT_TYPE.WALL;
+      } else {
+        const rand = Math.random(); // a value between 0 and 1
+        // For interior cells:
+        // 20% chance to be a wall.
+        if (rand < 0.3) {
+          cellType = OBJECT_TYPE.WALL;
+        }
+        // 5% chance to be a power pellet (PILL) — very random.
+        else if (rand < 0.25) {
+          cellType = OBJECT_TYPE.PILL;
+        }
+        // Otherwise, it's a dot.
+        else {
+          cellType = OBJECT_TYPE.DOT;
+        }
+      }
+      
+      div.classList.add('square', cellType);
+      div.style.cssText = `width: ${CELL_SIZE}px; height: ${CELL_SIZE}px;`;
+      this.DOMGrid.appendChild(div);
+      this.grid.push(div);
+      
+      if (cellType === OBJECT_TYPE.DOT) this.dotCount++;
+    }
+  }
+
+  // Check if the maze should be extended downward.
+  checkInfiniteExtension(character) {
+    const currentRow = Math.floor(character.pos / GRID_SIZE);
+    const totalRows = this.grid.length / GRID_SIZE;
+    if (currentRow >= totalRows - 3) {
+      this.appendRow();
+    }
   }
 
   addObject(pos, classes) {
@@ -41,10 +82,10 @@ class GameBoard {
   removeObject(pos, classes) {
     this.grid[pos].classList.remove(...classes);
   }
-  // Can have an arrow function here cause of this binding
+
   objectExist(pos, object) {
     return this.grid[pos].classList.contains(object);
-  };
+  }
 
   rotateDiv(pos, deg) {
     this.grid[pos].style.transform = `rotate(${deg}deg)`;
@@ -58,16 +99,18 @@ class GameBoard {
       const { classesToRemove, classesToAdd } = character.makeMove();
 
       if (character.rotation && nextMovePos !== character.pos) {
-        // Rotate
         this.rotateDiv(nextMovePos, character.dir.rotation);
-        // Rotate the previous div back
         this.rotateDiv(character.pos, 0);
       }
 
       this.removeObject(character.pos, classesToRemove);
       this.addObject(nextMovePos, classesToAdd);
-
       character.setNewPos(nextMovePos, direction);
+
+      // If the character is Pacman (or the player), check for extension.
+      if (classesToAdd.includes(OBJECT_TYPE.PACMAN)) {
+        this.checkInfiniteExtension(character);
+      }
     }
   }
 
