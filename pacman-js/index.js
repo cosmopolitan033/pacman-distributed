@@ -10,14 +10,19 @@ import soundPill from './sounds/pill.wav';
 import soundGameStart from './sounds/game_start.wav';
 import soundGameOver from './sounds/death.wav';
 import soundGhost from './sounds/eat_ghost.wav';
+
+import { io } from 'socket.io-client';
 // Dom Elements
 const gameGrid = document.querySelector('#game');
 const scoreTable = document.querySelector('#score');
 const startButton = document.querySelector('#start-button');
+const leaderboardList = document.querySelector('#leaderboard'); // Assume you have an element to show leaderboard
+
 // Game constants
 const POWER_PILL_TIME = 10000; // ms
 const GLOBAL_SPEED = 80; // ms
 const gameBoard = GameBoard.createGameBoard(gameGrid, LEVEL);
+
 // Initial setup
 let score = 0;
 let timer = null;
@@ -25,13 +30,42 @@ let gameWin = false;
 let powerPillActive = false;
 let powerPillTimer = null;
 
-// --- AUDIO --- //
+// --- SOCKET.IO SETUP --- //
+const socket = io("http://localhost:5000"); // Assumes the backend is served from the same origin
+
+socket.on('connect', () => {
+  console.log('Connected to server with id:', socket.id);
+});
+
+socket.on('connected', (data) => {
+  console.log('Player connected with id:', data.player_id);
+});
+
+socket.on('game_started', (data) => {
+  console.log(data.message);
+});
+
+socket.on('leaderboard_update', (data) => {
+  // Update the leaderboard UI.
+  let leaderboardHTML = '';
+  // data.scores is expected to be an object like { sid: score, ... }
+  for (const [playerId, playerScore] of Object.entries(data.scores)) {
+    leaderboardHTML += `<li>Player ${playerId}: ${playerScore}</li>`;
+  }
+  leaderboardList.innerHTML = leaderboardHTML;
+});
+
+socket.on('game_over', (data) => {
+  console.log('Game over for player:', data.player_id);
+});
+
+// --- AUDIO FUNCTION --- //
 function playAudio(audio) {
   const soundEffect = new Audio(audio);
   soundEffect.play();
 }
 
-// --- GAME CONTROLLER --- //
+// --- GAME CONTROLLER FUNCTIONS --- //
 function gameOver(pacman, grid) {
   playAudio(soundGameOver);
 
@@ -39,10 +73,11 @@ function gameOver(pacman, grid) {
     pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
   );
 
-  gameBoard.showGameStatus(gameWin);
+  // Notify backend of game over along with the final score.
+  socket.emit('game_over', { score: score });
 
+  gameBoard.showGameStatus(gameWin);
   clearInterval(timer);
-  // Show startbutton
   startButton.classList.remove('hide');
 }
 
@@ -55,7 +90,7 @@ function checkCollision(pacman, ghosts) {
       gameBoard.removeObject(collidedGhost.pos, [
         OBJECT_TYPE.GHOST,
         OBJECT_TYPE.SCARED,
-        collidedGhost.name
+        collidedGhost.name,
       ]);
       collidedGhost.pos = collidedGhost.startPos;
       score += 100;
@@ -79,27 +114,18 @@ function gameLoop(pacman, ghosts) {
   // 5. Check if Pacman eats a dot
   if (gameBoard.objectExist(pacman.pos, OBJECT_TYPE.DOT)) {
     playAudio(soundDot);
-
     gameBoard.removeObject(pacman.pos, [OBJECT_TYPE.DOT]);
-    // Remove a dot
     gameBoard.dotCount--;
-    // Add Score
     score += 10;
   }
   // 6. Check if Pacman eats a power pill
   if (gameBoard.objectExist(pacman.pos, OBJECT_TYPE.PILL)) {
     playAudio(soundPill);
-
     gameBoard.removeObject(pacman.pos, [OBJECT_TYPE.PILL]);
-
     pacman.powerPill = true;
     score += 50;
-
     clearTimeout(powerPillTimer);
-    powerPillTimer = setTimeout(
-      () => (pacman.powerPill = false),
-      POWER_PILL_TIME
-    );
+    powerPillTimer = setTimeout(() => (pacman.powerPill = false), POWER_PILL_TIME);
   }
   // 7. Change ghost scare mode depending on powerpill
   if (pacman.powerPill !== powerPillActive) {
@@ -113,16 +139,19 @@ function gameLoop(pacman, ghosts) {
   }
   // 9. Show new score
   scoreTable.innerHTML = score;
+  // Periodically update score on server
+  socket.emit('update_score', { score: score });
 }
 
 function startGame() {
   playAudio(soundGameStart);
-
   gameWin = false;
   powerPillActive = false;
   score = 0;
-
   startButton.classList.add('hide');
+
+  // Notify backend that game is starting
+  socket.emit('start_game', {});
 
   gameBoard.createGrid(LEVEL);
 
@@ -136,12 +165,26 @@ function startGame() {
     new Ghost(5, 188, randomMovement, OBJECT_TYPE.BLINKY),
     new Ghost(4, 209, randomMovement, OBJECT_TYPE.PINKY),
     new Ghost(3, 230, randomMovement, OBJECT_TYPE.INKY),
-    new Ghost(2, 251, randomMovement, OBJECT_TYPE.CLYDE)
+    new Ghost(2, 251, randomMovement, OBJECT_TYPE.CLYDE),
   ];
 
   // Gameloop
   timer = setInterval(() => gameLoop(pacman, ghosts), GLOBAL_SPEED);
 }
 
-// Initialize game
+// Optionally, use an HTTP endpoint to fetch the leaderboard on demand.
+function fetchLeaderboard() {
+  fetch('/api/leaderboard')
+    .then((response) => response.json())
+    .then((data) => {
+      let leaderboardHTML = '';
+      data.forEach((entry) => {
+        leaderboardHTML += `<li>Player ${entry[0]}: ${entry[1]}</li>`;
+      });
+      leaderboardList.innerHTML = leaderboardHTML;
+    })
+    .catch((err) => console.error('Error fetching leaderboard:', err));
+}
+
+// Initialize game on start button click
 startButton.addEventListener('click', startGame);
