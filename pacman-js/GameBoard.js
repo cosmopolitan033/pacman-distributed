@@ -47,8 +47,8 @@ class GameBoard {
         if (rand < 0.3) {
           cellType = OBJECT_TYPE.WALL;
         }
-        // 5% chance to be a power pellet (PILL) — very random.
-        else if (rand < 0.25) {
+        // 30% chance to be a power pellet (PILL) — very random.
+        else if (rand < 0.30) {
           cellType = OBJECT_TYPE.PILL;
         }
         // Otherwise, it's a dot.

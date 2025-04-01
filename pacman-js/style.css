@@ -164,3 +164,24 @@ body {
     );
   }
 }
+
+/* Scoreboard (Leaderboard) Styles */
+#leaderboard {
+  list-style: none;
+  padding: 0;
+  margin: 20px auto;
+  max-width: 400px;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+#leaderboard li {
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  font-size: 18px;
+}
+
+#leaderboard li:last-child {
+  border-bottom: none;
+}

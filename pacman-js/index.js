@@ -16,7 +16,7 @@ import { io } from 'socket.io-client';
 const gameGrid = document.querySelector('#game');
 const scoreTable = document.querySelector('#score');
 const startButton = document.querySelector('#start-button');
-const leaderboardList = document.querySelector('#leaderboard'); // Assume you have an element to show leaderboard
+// const leaderboardList = document.querySelector('#leaderboard'); // Assume you have an element to show leaderboard
 
 // Game constants
 const POWER_PILL_TIME = 10000; // ms
@@ -173,6 +173,21 @@ function startGame() {
 }
 
 // Optionally, use an HTTP endpoint to fetch the leaderboard on demand.
+// function fetchLeaderboard() {
+//   fetch('/api/leaderboard')
+//     .then((response) => response.json())
+//     .then((data) => {
+//       let leaderboardHTML = '';
+//       data.forEach((entry) => {
+//         leaderboardHTML += `<li>Player ${entry[0]}: ${entry[1]}</li>`;
+//       });
+//       leaderboardList.innerHTML = leaderboardHTML;
+//     })
+//     .catch((err) => console.error('Error fetching leaderboard:', err));
+// }
+
+const leaderboardList = document.getElementById('leaderboard');
+
 function fetchLeaderboard() {
   fetch('/api/leaderboard')
     .then((response) => response.json())
@@ -185,6 +200,9 @@ function fetchLeaderboard() {
     })
     .catch((err) => console.error('Error fetching leaderboard:', err));
 }
+
+// Call the function to load the leaderboard
+fetchLeaderboard();
 
 // Initialize game on start button click
 startButton.addEventListener('click', startGame);
