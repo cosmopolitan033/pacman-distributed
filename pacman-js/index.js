@@ -31,7 +31,7 @@ let powerPillActive = false;
 let powerPillTimer = null;
 
 // --- SOCKET.IO SETUP --- //
-const socket = io("http://localhost:5000"); // Assumes the backend is served from the same origin
+const socket = io("http://localhost:5050"); // Assumes the backend is served from the same origin
 
 socket.on('connect', () => {
   console.log('Connected to server with id:', socket.id);
