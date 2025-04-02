@@ -29,12 +29,14 @@ let timer = null;
 let gameWin = false;
 let powerPillActive = false;
 let powerPillTimer = null;
+let playerId = ""
 
 // --- SOCKET.IO SETUP --- //
 const socket = io("http://localhost:5050"); // Assumes the backend is served from the same origin
 
 socket.on('connect', () => {
   console.log('Connected to server with id:', socket.id);
+  playerId = socket.id;
 });
 
 socket.on('connected', (data) => {
@@ -46,13 +48,34 @@ socket.on('game_started', (data) => {
 });
 
 socket.on('leaderboard_update', (data) => {
-  // Update the leaderboard UI.
-  let leaderboardHTML = '';
-  // data.scores is expected to be an object like { sid: score, ... }
-  for (const [playerId, playerScore] of Object.entries(data.scores)) {
-    leaderboardHTML += `<li>Player ${playerId}: ${playerScore}</li>`;
+  // Convert data.scores into an array of objects and sort by score in descending order
+  const leaderboard = Object.entries(data.scores)
+      .map(([id, score]) => ({
+        id,
+        name: `Player ${id}`,
+        score
+      }))
+      .sort((a, b) => b.score - a.score); // Sort players by score (highest first)
+
+  let status = '<span class="title">Leaderboard</span>';
+  for (let i = 0; i < leaderboard.length; i++) {
+    status += '<br />';
+    if (leaderboard[i].id === playerId) {
+      if (leaderboard[i].name.length !== 0) {
+        status += `<span class="me">${i + 1}. ${leaderboard[i].name} - ${leaderboard[i].score}</span>`;
+      } else {
+        status += `<span class="me">${i + 1}. An unnamed cell - ${leaderboard[i].score}</span>`;
+      }
+    } else {
+      if (leaderboard[i].name.length !== 0) {
+        status += `${i + 1}. ${leaderboard[i].name} - ${leaderboard[i].score}`;
+      } else {
+        status += `${i + 1}. An unnamed cell - ${leaderboard[i].score}`;
+      }
+    }
   }
-  leaderboardList.innerHTML = leaderboardHTML;
+
+  document.getElementById('status').innerHTML = status;
 });
 
 socket.on('game_over', (data) => {
