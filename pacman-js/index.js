@@ -29,12 +29,19 @@ let timer = null;
 let gameWin = false;
 let powerPillActive = false;
 let powerPillTimer = null;
+let playerId = "";
+let lives = 3; // Add lives counter
+
+function updateLives() {
+  document.querySelector('#lives span').textContent = lives;
+}
 
 // --- SOCKET.IO SETUP --- //
 const socket = io("http://localhost:5050"); // Assumes the backend is served from the same origin
 
 socket.on('connect', () => {
   console.log('Connected to server with id:', socket.id);
+  playerId = socket.id;
 });
 
 socket.on('connected', (data) => {
@@ -46,13 +53,34 @@ socket.on('game_started', (data) => {
 });
 
 socket.on('leaderboard_update', (data) => {
-  // Update the leaderboard UI.
-  let leaderboardHTML = '';
-  // data.scores is expected to be an object like { sid: score, ... }
-  for (const [playerId, playerScore] of Object.entries(data.scores)) {
-    leaderboardHTML += `<li>Player ${playerId}: ${playerScore}</li>`;
+  // Convert data.scores into an array of objects and sort by score in descending order
+  const leaderboard = Object.entries(data.scores)
+      .map(([id, score]) => ({
+        id,
+        name: `Player ${id}`,
+        score
+      }))
+      .sort((a, b) => b.score - a.score); // Sort players by score (highest first)
+
+  let status = '<span class="title">Leaderboard</span>';
+  for (let i = 0; i < leaderboard.length; i++) {
+    status += '<br />';
+    if (leaderboard[i].id === playerId) {
+      if (leaderboard[i].name.length !== 0) {
+        status += `<span class="me">${i + 1}. ${leaderboard[i].name} - ${leaderboard[i].score}</span>`;
+      } else {
+        status += `<span class="me">${i + 1}. An unnamed cell - ${leaderboard[i].score}</span>`;
+      }
+    } else {
+      if (leaderboard[i].name.length !== 0) {
+        status += `${i + 1}. ${leaderboard[i].name} - ${leaderboard[i].score}`;
+      } else {
+        status += `${i + 1}. An unnamed cell - ${leaderboard[i].score}`;
+      }
+    }
   }
-  leaderboardList.innerHTML = leaderboardHTML;
+
+  document.getElementById('status').innerHTML = status;
 });
 
 socket.on('game_over', (data) => {
@@ -67,18 +95,30 @@ function playAudio(audio) {
 
 // --- GAME CONTROLLER FUNCTIONS --- //
 function gameOver(pacman, grid) {
-  playAudio(soundGameOver);
+  lives--; // Decrease lives
+  updateLives();
 
-  document.removeEventListener('keydown', (e) =>
-    pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
-  );
-
-  // Notify backend of game over along with the final score.
-  socket.emit('game_over', { score: score });
-
-  gameBoard.showGameStatus(gameWin);
-  clearInterval(timer);
-  startButton.classList.remove('hide');
+  if (lives <= 0) {
+    playAudio(soundGameOver);
+    document.removeEventListener('keydown', (e) =>
+      pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
+    );
+    socket.emit('game_over', { score: score });
+    gameBoard.showGameStatus(gameWin);
+    clearInterval(timer);
+    startButton.classList.remove('hide');
+  } else {
+    // Reset Pacman position but continue game
+    gameBoard.removeObject(pacman.pos, [OBJECT_TYPE.PACMAN]);
+    pacman.setNewPos(287); // Reset to starting position
+    gameBoard.addObject(287, [OBJECT_TYPE.PACMAN]);
+    // Reset ghosts
+    ghosts.forEach(ghost => {
+      gameBoard.removeObject(ghost.pos, [OBJECT_TYPE.GHOST, OBJECT_TYPE.SCARED, ghost.name]);
+      ghost.pos = ghost.startPos;
+      gameBoard.addObject(ghost.startPos, [OBJECT_TYPE.GHOST, ghost.name]);
+    });
+  }
 }
 
 function checkCollision(pacman, ghosts) {
@@ -148,6 +188,8 @@ function startGame() {
   gameWin = false;
   powerPillActive = false;
   score = 0;
+  lives = 3; // Reset lives
+  updateLives(); // Update lives display
   startButton.classList.add('hide');
 
   // Notify backend that game is starting
