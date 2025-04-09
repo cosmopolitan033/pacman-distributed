@@ -1,134 +1,135 @@
-# 🕹️ Multiplayer Pacman Game (Docker + Kubernetes)
+## 🕹️ Pacman Multiplayer Game on Kubernetes
 
-This project is a browser-based **Multiplayer Pacman** game using:
-- **Frontend**: JavaScript (with `socket.io-client`)
-- **Backend**: Python Flask + Socket.IO + Redis
-- **Deployment**: Docker Compose (for local dev), Kubernetes with Minikube (for scalable setup)
+This project is a multiplayer Pacman game with a Flask+Socket.IO backend and a static frontend. It uses Redis for real-time score synchronization and runs entirely on Kubernetes using Minikube.
 
 ---
 
-## 📦 Project Structure
-
-```
-.
-├── docker-compose.yml          # For local development
-├── multiplayer/                # Python backend
-│   ├── Dockerfile
-│   └── main.py
-├── pacman-js/                  # Frontend app
-│   ├── Dockerfile
-│   ├── index.js                # Connects to Socket.IO backend
-│   ├── sounds/ etc.
-├── k8s/                        # Kubernetes manifests
-│   ├── backend-deployment.yaml
-│   ├── frontend-deployment.yaml
-│   └── redis.yaml
-```
-
----
-
-## 🚀 Run with Docker Compose (Local Dev)
-
-### 🧰 Prerequisites
-
-- Docker Desktop installed
-
-### ▶️ Steps
-
-```bash
-# Build and start services
-docker compose up --build -d
-```
-
-### ✅ Access the Game
-
-Open your browser at:
-
-```
-http://localhost:1234
-```
-
-All connected players will sync scores via Socket.IO and Redis.
-
----
-
-## ☸️ Run with Kubernetes (Minikube)
-
-### 🧰 Prerequisites
+## 🛠️ Requirements
 
 - Docker
-- Minikube
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
 - kubectl
+- Node.js (for building frontend)
+- Python (for backend if running locally)
 
-### ▶️ Start Minikube and use its Docker daemon
+---
+
+## 🚀 Quickstart
+
+### 1. Start Minikube with Ingress enabled
 
 ```bash
 minikube start --driver=docker
+minikube addons enable ingress
+```
+
+---
+
+### 2. Build Docker Images inside Minikube
+
+```bash
 eval $(minikube docker-env)
+
+# Build frontend
+docker build -t pacman-frontend ./pacman-js
+
+# Build backend
+docker build -t pacman-backend ./multiplayer
 ```
 
-### 🛠️ Build Docker images inside Minikube
+---
+
+### 3. Deploy to Kubernetes
 
 ```bash
-# From project root
-docker build -t pacman-backend -f multiplayer/Dockerfile .
-docker build -t pacman-frontend -f pacman-js/Dockerfile .
+kubectl apply -f k8s/
 ```
 
-### 📂 Deploy Redis, Backend, and Frontend
+> Make sure your `k8s/` folder contains:
+> - `backend.yaml`
+> - `frontend.yaml`
+> - `redis.yaml`
+> - `ingress.yaml`
+
+---
+
+### 4. Add `pacman.local` to your `/etc/hosts`
 
 ```bash
-kubectl apply -f k8s/redis.yaml
-kubectl apply -f k8s/backend-deployment.yaml
-kubectl apply -f k8s/frontend-deployment.yaml
+sudo vim /etc/hosts
 ```
 
-### 🧪 Check status
+Add this line:
+
+```ini
+127.0.0.1 pacman.local
+```
+
+---
+
+### 5. Expose Ingress Controller (if not already)
 
 ```bash
+kubectl patch svc ingress-nginx-controller \
+  -n ingress-nginx \
+  -p '{"spec": {"type": "LoadBalancer", "externalIPs":["127.0.0.1"]}}'
+```
+
+Or if it's pending, just run:
+
+```bash
+sudo minikube tunnel
+```
+
+⚠️ Keep that terminal open if using `minikube tunnel`.
+
+---
+
+### 6. Open in browser
+
+```bash
+http://pacman.local
+```
+
+---
+
+## 🧱 Folder Structure
+
+```
+pacman-distributed/
+├── pacman-js/           # Frontend code (Node.js + http-server)
+├── multiplayer/         # Backend code (Flask + Socket.IO)
+├── k8s/                 # All Kubernetes manifests
+│   ├── backend.yaml
+│   ├── frontend.yaml
+│   ├── redis.yaml
+│   └── ingress.yaml
+```
+
+---
+
+## 📦 Built With
+
+- Flask + Flask-SocketIO
+- Redis
+- Node.js (Frontend build)
+- Kubernetes (Minikube + Ingress NGINX)
+
+---
+
+## 🔧 Useful Commands
+
+```bash
+# View logs
+kubectl logs -l app=pacman-backend
+kubectl logs -l app=pacman-frontend
+
+# View services
+kubectl get svc
+
+# View pods
 kubectl get pods
-kubectl get services
+
+# View ingress
+kubectl get ingress
 ```
-
-Wait until all pods are `Running`.
-
-### 🌐 Access the Game in Browser
-
-```bash
-minikube service pacman-frontend
-```
-
-This will open a browser window at something like:
-
-```
-http://127.0.0.1:31234
-```
-
-### ✅ Multiplayer Sync via Redis
-
-The backend is configured to use Redis for:
-- Socket.IO pub/sub
-- Score storage (via Redis hash `scores`)
-  So all players, no matter which backend pod they hit, share the same state.
-
----
-
-## 🧹 Clean Up
-
-```bash
-kubectl delete -f k8s/
-minikube stop
-```
-
----
-
-## 🛠 Notes
-
-- `main.py` uses `message_queue='redis://redis:6379'` to enable multi-instance sync.
-- `index.js` (frontend) must connect to the backend using:
-  ```js
-  const socket = io("http://pacman-backend:5050");
-  ```
-- To enable scaling, you can increase backend replicas in Kubernetes.
-
----
