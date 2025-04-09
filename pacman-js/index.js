@@ -37,7 +37,8 @@ function updateLives() {
 }
 
 // --- SOCKET.IO SETUP --- //
-const socket = io("http://localhost:5050"); // Assumes the backend is served from the same origin
+// const socket = io("http://localhost:5050"); // Assumes the backend is served from the same origin
+const socket = io("http://pacman-backend:5050");
 
 socket.on('connect', () => {
   console.log('Connected to server with id:', socket.id);
