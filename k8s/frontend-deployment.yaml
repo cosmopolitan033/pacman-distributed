@@ -24,12 +24,10 @@ kind: Service
 metadata:
   name: pacman-frontend
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     app: pacman-frontend
   ports:
     - protocol: TCP
-      port: 1234
+      port: 80
       targetPort: 1234
-      nodePort: 31234
-
