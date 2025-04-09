@@ -24,7 +24,6 @@ kind: Service
 metadata:
   name: pacman-frontend
 spec:
-  type: LoadBalancer
   selector:
     app: pacman-frontend
   ports:

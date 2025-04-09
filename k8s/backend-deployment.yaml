@@ -29,7 +29,6 @@ kind: Service
 metadata:
   name: pacman-backend
 spec:
-  type: LoadBalancer
   selector:
     app: pacman-backend
   ports:

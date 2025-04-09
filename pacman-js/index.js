@@ -39,8 +39,8 @@ function updateLives() {
 // --- SOCKET.IO SETUP --- //
 // const socket = io("http://127.0.0.1:5050"); // Assumes the backend is served from the same origin
 // const socket = io("http://pacman-backend:5050");
-const BACKEND_HOST = 'http://127.0.0.1:5050'; // <- Use your real minikube IP and NodePort
-const socket = io(BACKEND_HOST); // Socket.IO needs to know where the backend is
+// const BACKEND_HOST = 'http://127.0.0.1:5050'; // <- Use your real minikube IP and NodePort
+const socket = io(); // Socket.IO needs to know where the backend is
 
 socket.on('connect', () => {
   console.log('Connected to server with id:', socket.id);
@@ -234,7 +234,7 @@ function startGame() {
 const leaderboardList = document.getElementById('leaderboard');
 
 function fetchLeaderboard() {
-  fetch(`${BACKEND_HOST}/api/leaderboard`)
+  fetch(`/api/leaderboard`)
     .then((response) => response.json())
     .then((data) => {
       let leaderboardHTML = '';
