@@ -72,7 +72,7 @@ Add this line:
 ```bash
 kubectl patch svc ingress-nginx-controller \
   -n ingress-nginx \
-  -p '{"spec": {"type": "LoadBalancer", "externalIPs":["127.0.0.1"]}}'
+  -p '{"spec": {"type": "LoadBalancer"}}'
 ```
 
 Or if it's pending, just run:
