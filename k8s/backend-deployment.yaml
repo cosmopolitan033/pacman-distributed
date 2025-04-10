@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pacman-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pacman-backend
+  template:
+    metadata:
+      labels:
+        app: pacman-backend
+    spec:
+      containers:
+        - name: backend
+          image: pacman-backend
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5050
+          env:
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pacman-backend
+spec:
+  selector:
+    app: pacman-backend
+  ports:
+    - protocol: TCP
+      port: 5050
+      targetPort: 5050
