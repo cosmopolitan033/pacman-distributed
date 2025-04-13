@@ -98,19 +98,21 @@ function playAudio(audio) {
 
 // --- GAME CONTROLLER FUNCTIONS --- //
 function gameOver(pacman, grid) {
-  lives--; // Decrease lives
-  updateLives();
-
-  if (lives <= 0) {
+  // First check if this is the last life
+  if (lives <= 1) {
+    lives = 0; // Set lives to 0 instead of decrementing below zero
+    updateLives();
     playAudio(soundGameOver);
     document.removeEventListener('keydown', (e) =>
-      pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
+        pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
     );
     socket.emit('game_over', { score: score });
     gameBoard.showGameStatus(gameWin);
     clearInterval(timer);
     startButton.classList.remove('hide');
   } else {
+    lives--; // Decrease lives only if we have more than 1
+    updateLives();
     // Reset Pacman position but continue game
     gameBoard.removeObject(pacman.pos, [OBJECT_TYPE.PACMAN]);
     pacman.setNewPos(287); // Reset to starting position
@@ -122,6 +124,18 @@ function gameOver(pacman, grid) {
       gameBoard.addObject(ghost.startPos, [OBJECT_TYPE.GHOST, ghost.name]);
     });
   }
+  playAudio(soundGameOver);
+
+  document.removeEventListener('keydown', (e) =>
+      pacman.handleKeyInput(e, gameBoard.objectExist.bind(gameBoard))
+  );
+
+  // Notify backend of game over along with the final score.
+  socket.emit('game_over', { score: score });
+
+  gameBoard.showGameStatus(gameWin);
+  clearInterval(timer);
+  startButton.classList.remove('hide');
 }
 
 function checkCollision(pacman, ghosts) {
