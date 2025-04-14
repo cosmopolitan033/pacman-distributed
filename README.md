@@ -133,3 +133,71 @@ kubectl get pods
 # View ingress
 kubectl get ingress
 ```
+
+---
+
+## 📊 Setting up Monitoring
+
+The project includes a complete monitoring stack with Prometheus, Loki, and Grafana for observability.
+
+### Prerequisites
+- Minikube running with ingress addon enabled (`minikube addons enable ingress`)
+- Helm installed
+- kubectl configured to use your minikube cluster
+
+### Installation
+
+1. Add the required hosts entry:
+   ```bash
+   # Add to /etc/hosts
+   127.0.0.1 pacman.local grafana.local
+   ```
+
+2. Navigate to the monitoring setup directory and run the setup script:
+   ```bash
+   cd k8s/monitoring
+   ./setup-monitoring.sh
+   ```
+
+### Accessing Monitoring Tools
+
+- **Grafana Dashboard**: http://grafana.local
+  - Default username: `admin`
+  - Password: Get it by running:
+    ```bash
+    kubectl get secret loki-stack-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
+    ```
+
+### Included Components
+
+- **Prometheus**: Metrics collection and storage
+  - Game performance metrics
+  - Kubernetes cluster metrics
+  - Node metrics
+
+- **Loki**: Log aggregation
+  - Application logs from both frontend and backend
+  - Kubernetes system logs
+
+- **Grafana**: Visualization and dashboards
+  - Pre-configured dashboards for:
+    - Kubernetes cluster overview
+    - Node metrics
+    - Application metrics
+    - Log visualization
+
+### Troubleshooting
+
+If you can't access Grafana:
+1. Ensure both ingress controllers are running:
+   ```bash
+   kubectl get ingress -A
+   ```
+2. Verify Grafana pod is running:
+   ```bash
+   kubectl get pods -n monitoring
+   ```
+3. Check Grafana logs:
+   ```bash
+   kubectl logs -n monitoring -l app.kubernetes.io/name=grafana
+   ```
