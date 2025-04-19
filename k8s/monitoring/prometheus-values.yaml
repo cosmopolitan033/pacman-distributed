@@ -1,0 +1,19 @@
+server:
+  global:
+    scrape_interval: 15s
+  persistentVolume:
+    enabled: true
+    size: 8Gi
+  service:
+    type: ClusterIP
+
+alertmanager:
+  persistentVolume:
+    enabled: true
+    size: 2Gi
+
+nodeExporter:
+  enabled: true
+
+pushgateway:
+  enabled: true
