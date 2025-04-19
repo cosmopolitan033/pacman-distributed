@@ -1,22 +1,36 @@
-## 🕹️ Pacman Multiplayer Game on Kubernetes
+# 🕹️ Pacman Multiplayer Game on Kubernetes
 
-This project is a multiplayer Pacman game with a Flask+Socket.IO backend and a static frontend. It uses Redis for real-time score synchronization and runs entirely on Kubernetes using Minikube.
+A real-time multiplayer Pacman game powered by **Flask + Socket.IO**, **Redis**, and a static JavaScript frontend. The entire stack is containerized and deployed on **Kubernetes** using **Minikube**, complete with observability via **Prometheus**, **Loki**, and **Grafana**.
 
 ---
 
-## 🛠️ Requirements
+## 📦 Tech Stack
 
-- Docker
+- **Frontend**: Vanilla JavaScript, HTML, CSS
+- **Backend**: Flask + Flask-SocketIO
+- **Real-Time Sync**: Redis Pub/Sub
+- **Deployment**: Kubernetes (Minikube)
+- **Monitoring**: Prometheus, Loki, Grafana
+- **Dev Tools**: Docker, kubectl, Helm
+
+---
+
+## 🛠️ Prerequisites
+
+Ensure you have the following installed:
+
+- [Docker](https://docs.docker.com/get-docker/)
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/)
-- kubectl
-- Node.js (for building frontend)
-- Python (for backend if running locally)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Node.js](https://nodejs.org/en/) (for frontend build)
+- [Python](https://www.python.org/) (for local backend testing)
+- [Helm](https://helm.sh/) (for monitoring setup)
 
 ---
 
 ## 🚀 Quickstart
 
-### 1. Start Minikube with Ingress enabled
+### 1. Start Minikube with Ingress Enabled
 
 ```bash
 minikube start --driver=docker
@@ -25,27 +39,27 @@ minikube addons enable ingress
 
 ---
 
-### 2. Build Docker Images inside Minikube
+### 2. Build Docker Images Inside Minikube
 
 ```bash
 eval $(minikube docker-env)
 
-# Build frontend
+# Frontend
 docker build -t pacman-frontend ./pacman-js
 
-# Build backend
+# Backend
 docker build -t pacman-backend ./multiplayer
 ```
 
 ---
 
-### 3. Deploy to Kubernetes
+### 3. Deploy Kubernetes Resources
 
 ```bash
 kubectl apply -f k8s/
 ```
 
-> Make sure your `k8s/` folder contains:
+> Ensure `k8s/` includes:
 > - `backend-deployment.yaml`
 > - `frontend-deployment.yaml`
 > - `redis.yaml`
@@ -53,21 +67,23 @@ kubectl apply -f k8s/
 
 ---
 
-### 4. Add `pacman.local` to your `/etc/hosts`
+### 4. Configure Local DNS
+
+Edit `/etc/hosts`:
 
 ```bash
 sudo vim /etc/hosts
 ```
 
-Add this line:
+Add:
 
-```ini
+```
 127.0.0.1 pacman.local grafana.local
 ```
 
 ---
 
-### 5. Expose Ingress Controller (if not already)
+### 5. Enable Ingress Exposure
 
 ```bash
 kubectl patch svc ingress-nginx-controller \
@@ -75,51 +91,119 @@ kubectl patch svc ingress-nginx-controller \
   -p '{"spec": {"type": "LoadBalancer"}}'
 ```
 
-Or if it's pending, just run:
+If still inaccessible, run:
 
 ```bash
 sudo minikube tunnel
 ```
 
-⚠️ Keep that terminal open if using `minikube tunnel`.
+> ⚠️ Keep this terminal open.
 
 ---
 
-### 6. Open in browser
+### 6. Access the Game
 
-```bash
+Open your browser:
+
+```
 http://pacman.local
 ```
 
 ---
 
-## 🧱 Folder Structure
+## 📊 Monitoring & Observability
+
+This project comes with a full observability stack using Prometheus, Loki, and Grafana.
+
+### 🧰 Setup Instructions
+
+1. Ensure `minikube` is running with ingress enabled.
+2. Add the following to `/etc/hosts` (if not already):
+
+   ```
+   127.0.0.1 grafana.local
+   ```
+
+3. Navigate to the monitoring setup directory:
+
+   ```bash
+   cd k8s/monitoring
+   ./setup-monitoring.sh
+   kubectl apply -f grafana-ingress.yaml
+   ```
+
+---
+
+### 📈 Access Grafana Dashboard
+
+```
+http://grafana.local
+```
+
+Default credentials:
+- **Username**: `admin`
+- **Password**:
+  ```bash
+  kubectl get secret loki-grafana -n monitoring \
+    -o jsonpath="{.data.admin-password}" | base64 --decode
+  ```
+
+---
+
+### 📦 Monitoring Components
+
+- **Prometheus**: Collects metrics
+    - Kubernetes cluster
+    - Node & app performance
+- **Loki**: Aggregates logs
+    - Frontend + Backend logs
+    - System logs
+- **Grafana**: Visualization dashboards
+    - Cluster overview
+    - Application metrics
+    - Logs
+
+---
+
+### 🧰 Troubleshooting Grafana Access
+
+```bash
+# Check all ingresses
+kubectl get ingress -A
+
+# Verify Grafana pod status
+kubectl get pods -n monitoring
+
+# Ensure correct Grafana service name
+kubectl get svc -n monitoring
+
+# Check Grafana logs
+kubectl logs -n monitoring -l app.kubernetes.io/name=grafana
+
+# Run minikube tunnel if access still fails
+minikube tunnel
+```
+
+---
+
+## 🧱 Project Structure
 
 ```
 pacman-distributed/
-├── docker-compose.yml          # Docker Compose configuration
-├── pacman-js/                  # Frontend code
+├── docker-compose.yml          # Local dev option (non-K8s)
+├── pacman-js/                  # Frontend game code
 │   ├── Dockerfile
-│   ├── GameBoard.js
-│   ├── Ghost.js
-│   ├── ghostmoves.js
-│   ├── index.html
-│   ├── index.js
-│   ├── package.json
-│   ├── Pacman.js
-│   ├── setup.js
-│   ├── style.css
-│   ├── background.jpg
-│   └── sounds/                 # Game sound effects
-├── multiplayer/                # Backend code (Flask + Socket.IO)
+│   ├── *.js, *.css, *.html
+│   └── sounds/
+├── multiplayer/                # Flask backend
 │   ├── Dockerfile
 │   └── main.py
-├── k8s/                        # All Kubernetes manifests
+├── k8s/                        # Kubernetes manifests
 │   ├── backend-deployment.yaml
 │   ├── frontend-deployment.yaml
 │   ├── redis.yaml
 │   ├── ingress.yaml
-│   └── monitoring/             # Monitoring stack configuration
+│   └── monitoring/             # Monitoring setup
 │       ├── grafana-ingress.yaml
 │       ├── loki-stack-values.yaml
 │       ├── prometheus-values.yaml
@@ -128,106 +212,15 @@ pacman-distributed/
 
 ---
 
-## 📦 Built With
-
-- Flask + Flask-SocketIO
-- Redis
-- Node.js (Frontend build)
-- Kubernetes (Minikube + Ingress NGINX)
-
----
-
-## 🔧 Useful Commands
+## 🧪 Useful Kubernetes Commands
 
 ```bash
-# View logs
+# Logs
 kubectl logs -l app=pacman-backend
 kubectl logs -l app=pacman-frontend
 
-# View services
-kubectl get svc
-
-# View pods
+# Resources
 kubectl get pods
-
-# View ingress
+kubectl get svc
 kubectl get ingress
 ```
-
----
-
-## 📊 Setting up Monitoring
-
-The project includes a complete monitoring stack with Prometheus, Loki, and Grafana for observability.
-
-### Prerequisites
-- Minikube running with ingress addon enabled (`minikube addons enable ingress`)
-- Helm installed
-- kubectl configured to use your minikube cluster
-
-### Installation
-
-1. Add the required hosts entry:
-   ```bash
-   # Add to /etc/hosts
-   127.0.0.1 pacman.local grafana.local
-   ```
-
-2. Navigate to the monitoring setup directory and run the setup script:
-   ```bash
-   cd k8s/monitoring
-   ./setup-monitoring.sh
-   ```
-
-### Accessing Monitoring Tools
-
-- **Grafana Dashboard**: http://grafana.local
-  - Default username: `admin`
-  - Password: Get it by running:
-    ```bash
-    kubectl get secret loki-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
-    ```
-
-### Included Components
-
-- **Prometheus**: Metrics collection and storage
-  - Game performance metrics
-  - Kubernetes cluster metrics
-  - Node metrics
-
-- **Loki**: Log aggregation
-  - Application logs from both frontend and backend
-  - Kubernetes system logs
-
-- **Grafana**: Visualization and dashboards
-  - Pre-configured dashboards for:
-    - Kubernetes cluster overview
-    - Node metrics
-    - Application metrics
-    - Log visualization
-
-### Troubleshooting
-
-If you can't access Grafana:
-1. Ensure both ingress controllers are running:
-   ```bash
-   kubectl get ingress -A
-   ```
-2. Verify Grafana pod is running:
-   ```bash
-   kubectl get pods -n monitoring
-   ```
-3. Check Grafana service name matches the one in grafana-ingress.yaml:
-   ```bash
-   kubectl get svc -n monitoring
-   ```
-   Make sure the service name in grafana-ingress.yaml matches the actual Grafana service (should be `loki-grafana`).
-4. Check Grafana logs:
-   ```bash
-   kubectl logs -n monitoring -l app.kubernetes.io/name=grafana
-   ```
-5. If you've applied the ingress but still can't access it, try:
-   ```bash
-   # Make sure minikube tunnel is running in a separate terminal
-   minikube tunnel
-   ```
