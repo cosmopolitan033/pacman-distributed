@@ -46,8 +46,8 @@ kubectl apply -f k8s/
 ```
 
 > Make sure your `k8s/` folder contains:
-> - `backend.yaml`
-> - `frontend.yaml`
+> - `backend-deployment.yaml`
+> - `frontend-deployment.yaml`
 > - `redis.yaml`
 > - `ingress.yaml`
 
@@ -62,7 +62,7 @@ sudo vim /etc/hosts
 Add this line:
 
 ```ini
-127.0.0.1 pacman.local
+127.0.0.1 pacman.local grafana.local
 ```
 
 ---
@@ -97,13 +97,33 @@ http://pacman.local
 
 ```
 pacman-distributed/
-├── pacman-js/           # Frontend code (Node.js + http-server)
-├── multiplayer/         # Backend code (Flask + Socket.IO)
-├── k8s/                 # All Kubernetes manifests
-│   ├── backend.yaml
-│   ├── frontend.yaml
+├── docker-compose.yml          # Docker Compose configuration
+├── pacman-js/                  # Frontend code
+│   ├── Dockerfile
+│   ├── GameBoard.js
+│   ├── Ghost.js
+│   ├── ghostmoves.js
+│   ├── index.html
+│   ├── index.js
+│   ├── package.json
+│   ├── Pacman.js
+│   ├── setup.js
+│   ├── style.css
+│   ├── background.jpg
+│   └── sounds/                 # Game sound effects
+├── multiplayer/                # Backend code (Flask + Socket.IO)
+│   ├── Dockerfile
+│   └── main.py
+├── k8s/                        # All Kubernetes manifests
+│   ├── backend-deployment.yaml
+│   ├── frontend-deployment.yaml
 │   ├── redis.yaml
-│   └── ingress.yaml
+│   ├── ingress.yaml
+│   └── monitoring/             # Monitoring stack configuration
+│       ├── grafana-ingress.yaml
+│       ├── loki-stack-values.yaml
+│       ├── prometheus-values.yaml
+│       └── setup-monitoring.sh
 ```
 
 ---
@@ -165,7 +185,7 @@ The project includes a complete monitoring stack with Prometheus, Loki, and Graf
   - Default username: `admin`
   - Password: Get it by running:
     ```bash
-    kubectl get secret loki-stack-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
+    kubectl get secret loki-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
     ```
 
 ### Included Components
@@ -197,7 +217,17 @@ If you can't access Grafana:
    ```bash
    kubectl get pods -n monitoring
    ```
-3. Check Grafana logs:
+3. Check Grafana service name matches the one in grafana-ingress.yaml:
+   ```bash
+   kubectl get svc -n monitoring
+   ```
+   Make sure the service name in grafana-ingress.yaml matches the actual Grafana service (should be `loki-grafana`).
+4. Check Grafana logs:
    ```bash
    kubectl logs -n monitoring -l app.kubernetes.io/name=grafana
+   ```
+5. If you've applied the ingress but still can't access it, try:
+   ```bash
+   # Make sure minikube tunnel is running in a separate terminal
+   minikube tunnel
    ```

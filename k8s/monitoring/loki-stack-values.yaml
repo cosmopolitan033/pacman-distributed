@@ -27,9 +27,17 @@ grafana:
   persistence:
     enabled: true
     size: 5Gi
+  # Create only one datasource file with clear default settings
   datasources:
     datasources.yaml:
       apiVersion: 1
+      deleteDatasources:
+        - name: Loki
+          orgId: 1
+        - name: Prometheus
+          orgId: 1
+        - name: Alertmanager
+          orgId: 1
       datasources:
         - name: Prometheus
           type: prometheus
@@ -40,6 +48,11 @@ grafana:
           type: loki
           url: http://loki.monitoring.svc.cluster.local:3100
           access: proxy
+          isDefault: false
+  # Disable other potential datasource configurations
+  sidecar:
+    datasources:
+      enabled: false
   dashboardProviders:
     dashboardproviders.yaml:
       apiVersion: 1
